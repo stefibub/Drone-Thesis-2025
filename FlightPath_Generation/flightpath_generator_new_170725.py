@@ -229,9 +229,9 @@ def export_to_marvelmind(waypoints: List[Waypoint], filename: str):
     """
     with open(filename, 'w', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(['x', 'y', 'z', 'speed', 'gimbal_pitch'])
-        for wp in waypoints:
-            writer.writerow([wp.x, wp.y, wp.z, wp.speed, wp.gimbal_pitch])
+        writer.writerow(['index', 'x', 'y', 'z', 'speed', 'gimbal_pitch'])
+        for idx, wp in enumerate(waypoints, start=1):
+            writer.writerow([idx, wp.x, wp.y, wp.z, wp.speed, wp.gimbal_pitch])
 
 
 def visualize_waypoints_2d(waypoints: List[Waypoint]):
