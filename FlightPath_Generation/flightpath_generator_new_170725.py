@@ -7,7 +7,7 @@ this module generates waypoints to scan all faces of a cuboid (floor, ceiling, w
 import math  # trigonometry and distance calculations
 import csv   # write waypoints to csv file
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Dict
 import matplotlib.pyplot as plt  # plotting in 2d
 from mpl_toolkits.mplot3d import Axes3D  # plotting in 3d
 
@@ -89,15 +89,14 @@ def generate_grid_waypoints(
 
     returns list of waypoints covering the grid
     """
-    nx = max(1, math.ceil(span_x / spacing_x))  # columns
-    ny = max(1, math.ceil(span_y / spacing_y))  # rows
-    dx = span_x / nx  # actual step x
-    dy = span_y / ny  # actual step y
+    nx = max(1, math.ceil(span_x / spacing_x))
+    ny = max(1, math.ceil(span_y / spacing_y))
+    dx = span_x / nx
+    dy = span_y / ny
 
     waypoints: List[Waypoint] = []
     for row in range(ny + 1):
         y = row * dy
-        # zig-zag: reverse x direction every other row
         cols = range(nx + 1) if row % 2 == 0 else range(nx, -1, -1)
         for col in cols:
             x = col * dx
@@ -138,7 +137,6 @@ def generate_wall_waypoints(
         rows = range(nheight + 1) if i % 2 == 0 else range(nheight, -1, -1)
         for j in rows:
             z = j * dh
-            # assign x,y based on wall orientation
             if fixed_axis == 'x':
                 x, y = wall_offset, pos_span
             else:
@@ -164,32 +162,32 @@ def generate_cube_scan(
     """
     w, l, h = dims
 
-    # precompute grid params for floor/ceiling
     fp_w, fp_h = calculate_footprint(drone, h)
     sx, sy = fp_w * (1 - overlap), fp_h * (1 - overlap)
     speed_xy = calculate_speed(fp_w, overlap, drone.fps)
 
     all_wps: List[Waypoint] = []
 
-    # floor scan at z = clearance (or min_altitude)
     z_floor = max(clearance, drone.min_altitude)
-    floor = generate_grid_waypoints(w - 2*clearance, l - 2*clearance,
-                                    sx, sy, z_floor, -90.0, speed_xy)
+    floor = generate_grid_waypoints(
+        w - 2*clearance, l - 2*clearance,
+        sx, sy, z_floor, -90.0, speed_xy
+    )
     for wp in floor:
         wp.x += clearance
         wp.y += clearance
     all_wps.extend(floor)
 
-    # ceiling scan at z = h - clearance
     z_ceil = max(h - clearance, drone.min_altitude)
-    ceiling = generate_grid_waypoints(w - 2*clearance, l - 2*clearance,
-                                      sx, sy, z_ceil, 60.0, speed_xy)
+    ceiling = generate_grid_waypoints(
+        w - 2*clearance, l - 2*clearance,
+        sx, sy, z_ceil, 60.0, speed_xy
+    )
     for wp in ceiling:
         wp.x += clearance
         wp.y += clearance
     all_wps.extend(ceiling)
 
-    # wall parameters
     fp_w_wall, fp_h_wall = calculate_footprint(drone, wall_offset)
     ss, sh = fp_w_wall * (1 - overlap), fp_h_wall * (1 - overlap)
     speed_z = calculate_speed(fp_h_wall, overlap, drone.fps)
@@ -200,23 +198,19 @@ def generate_cube_scan(
         ('x', wall_offset),
         ('x', w - wall_offset)
     ]
-    # iterate each wall face
     for axis, pos in walls:
         span = w if axis == 'y' else l
         height_range = h - 2*clearance
-        # generate waypoints with horizontal offset from walls
         raw_wps = generate_wall_waypoints(
             span - 2*wall_offset,
             height_range, ss, sh,
             pos, axis, 0.0, speed_z
         )
         for wp in raw_wps:
-            # horizontal offset inward from walls
             if axis == 'y':
                 wp.x += wall_offset
             else:
                 wp.y += wall_offset
-            # vertical clearance and enforce min_altitude
             wp.z = max(wp.z + clearance, drone.min_altitude)
         all_wps.extend(raw_wps)
 
@@ -225,7 +219,8 @@ def generate_cube_scan(
 
 def export_to_marvelmind(waypoints: List[Waypoint], filename: str):
     """
-    write waypoints to csv columns: x,y,z,speed,gimbal_pitch
+    write waypoints to csv columns: index, x, y, z, speed, gimbal_pitch
+    each waypoint is numbered sequentially starting from 1
     """
     with open(filename, 'w', newline='') as f:
         writer = csv.writer(f)
@@ -234,33 +229,85 @@ def export_to_marvelmind(waypoints: List[Waypoint], filename: str):
             writer.writerow([wp.x, wp.y, wp.z, wp.speed, wp.gimbal_pitch])
 
 
-def visualize_waypoints_2d(waypoints: List[Waypoint]):
+def visualize_waypoints_2d(
+    waypoints: List[Waypoint],
+    draw_lines: bool = True,
+    line_kwargs: Optional[Dict] = None,
+    marker_kwargs: Optional[Dict] = None
+):
     """
-    plot top-down, side, and front projections in a single figure
+    plot top-down, side, and front projections with optional connecting lines
+
+    draw_lines: if true, connect points in sequence
+    line_kwargs: kwargs passed to plot() for lines
+    marker_kwargs: kwargs passed to scatter() for markers
     """
     xs = [wp.x for wp in waypoints]
     ys = [wp.y for wp in waypoints]
     zs = [wp.z for wp in waypoints]
+    line_kwargs = line_kwargs or {'linestyle': '-', 'linewidth': 1, 'alpha': 0.7, 'color': 'C0'}
+    marker_kwargs = marker_kwargs or {'marker': 'o', 's': 30, 'alpha': 0.8, 'color': 'C1'}
+
     fig, axs = plt.subplots(1, 3, figsize=(18,6))
-    axs[0].scatter(xs, ys, s=10); axs[0].set(title='top-down', xlabel='x', ylabel='y'); axs[0].axis('equal')
-    axs[1].scatter(xs, zs, s=10); axs[1].set(title='side', xlabel='x', ylabel='z')
-    axs[2].scatter(ys, zs, s=10); axs[2].set(title='front', xlabel='y', ylabel='z')
-    plt.tight_layout(); plt.show()
+    # top-down
+    ax = axs[0]
+    if draw_lines:
+        ax.plot(xs, ys, **line_kwargs)
+    ax.scatter(xs, ys, **marker_kwargs)
+    ax.set(title='top-down', xlabel='x', ylabel='y')
+    ax.grid(True)
+    ax.axis('equal')
+
+    # side
+    ax = axs[1]
+    if draw_lines:
+        ax.plot(xs, zs, **line_kwargs)
+    ax.scatter(xs, zs, **marker_kwargs)
+    ax.set(title='side', xlabel='x', ylabel='z')
+    ax.grid(True)
+
+    # front
+    ax = axs[2]
+    if draw_lines:
+        ax.plot(ys, zs, **line_kwargs)
+    ax.scatter(ys, zs, **marker_kwargs)
+    ax.set(title='front', xlabel='y', ylabel='z')
+    ax.grid(True)
+
+    plt.tight_layout()
+    plt.show()
 
 
-def visualize_waypoints_3d(waypoints: List[Waypoint], elev: float=30, azim: float=45):
+def visualize_waypoints_3d(
+    waypoints: List[Waypoint],
+    elev: float = 30,
+    azim: float = 45,
+    draw_lines: bool = True,
+    line_kwargs: Optional[Dict] = None,
+    marker_kwargs: Optional[Dict] = None
+):
     """
-    3d scatter plot with given elevation and azimuth
+    3d scatter plot with optional connecting lines
+
+    draw_lines: if true, connect points in sequence
+    line_kwargs: kwargs for plot()
+    marker_kwargs: kwargs for scatter()
     """
     xs = [wp.x for wp in waypoints]
     ys = [wp.y for wp in waypoints]
     zs = [wp.z for wp in waypoints]
+    line_kwargs = line_kwargs or {'linestyle': '-', 'linewidth': 1, 'alpha': 0.8, 'color': 'C0'}
+    marker_kwargs = marker_kwargs or {'marker': 'o', 's': 30, 'alpha': 0.9, 'color': 'C2'}
+
     fig = plt.figure(figsize=(8,6))
     ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(xs, ys, zs, s=10)
+    if draw_lines:
+        ax.plot(xs, ys, zs, **line_kwargs)
+    ax.scatter(xs, ys, zs, **marker_kwargs)
     ax.set(title='3d view', xlabel='x', ylabel='y', zlabel='z')
     ax.view_init(elev=elev, azim=azim)
-    plt.tight_layout(); plt.show()
+    plt.tight_layout()
+    plt.show()
 
 
 def validate_mission(drone: DroneConfig, waypoints: List[Waypoint]) -> Tuple[bool, dict]:
@@ -277,7 +324,6 @@ def validate_mission(drone: DroneConfig, waypoints: List[Waypoint]) -> Tuple[boo
         total_dist += dist
         spd = p1.speed if p1.speed>0 else drone.speed
         total_time += dist/spd
-    # return to origin
     last = waypoints[-1]
     rt_dist = math.sqrt(last.x**2 + last.y**2 + last.z**2)
     total_dist += rt_dist
@@ -290,7 +336,6 @@ def validate_mission(drone: DroneConfig, waypoints: List[Waypoint]) -> Tuple[boo
 if __name__ == '__main__':
     # example usage
 
-    # define drone configuration
     cfg = DroneConfig(
         battery_time=1200,          # max flight time (s)
         max_distance=5000,          # max travel distance (m)
@@ -303,10 +348,8 @@ if __name__ == '__main__':
         min_altitude=1.0            # minimum safe altitude (m)
     )
 
-    # cuboid dimensions: width, length, height (m)
     dims = (6.0, 6.0, 3.0)
 
-    # generate scan waypoints
     wps = generate_cube_scan(
         drone=cfg,
         dims=dims,
@@ -315,21 +358,17 @@ if __name__ == '__main__':
         clearance=0.75               # inward margin from surfaces (m)
     )
 
-    # validate mission
     feasible, metrics = validate_mission(cfg, wps)
 
-    # count scans per face
-    scans_floor   = sum(1 for wp in wps if wp.gimbal_pitch == -90.0)
-    scans_ceiling = sum(1 for wp in wps if wp.gimbal_pitch ==  60.0)
-    scans_walls   = len(wps) - scans_floor - scans_ceiling
-    total_scans   = len(wps)
+    scans_floor = sum(1 for wp in wps if wp.gimbal_pitch == -90.0)
+    scans_ceiling = sum(1 for wp in wps if wp.gimbal_pitch == 60.0)
+    scans_walls = len(wps) - scans_floor - scans_ceiling
+    total_scans = len(wps)
 
-    # compute battery usage
-    flight_time_s     = metrics['time']
-    flight_time_min   = flight_time_s / 60
-    battery_pct_used  = flight_time_s / cfg.battery_time * 100
+    flight_time_s = metrics['time']
+    flight_time_min = flight_time_s / 60
+    battery_pct_used = flight_time_s / cfg.battery_time * 100
 
-    # output summary
     print(f"scans per face: floor={scans_floor}, ceiling={scans_ceiling}, walls={scans_walls}")
     print(f"total scans: {total_scans}")
     print(f"total distance: {metrics['distance']:.1f} m")
@@ -337,7 +376,6 @@ if __name__ == '__main__':
     print(f"estimated battery usage: {flight_time_s:.1f} s ({battery_pct_used:.1f}% of {cfg.battery_time}s)")
     print(f"mission feasible: {feasible}")
 
-    # export and visualize
     export_to_marvelmind(wps, 'waypoints.csv')
     visualize_waypoints_2d(wps)
     visualize_waypoints_3d(wps)
