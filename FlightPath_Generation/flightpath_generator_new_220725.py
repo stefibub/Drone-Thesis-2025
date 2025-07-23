@@ -11,7 +11,7 @@ class DroneConfig:
     """
     weight: float                    # weight in kg 
     max_battery_time: float          # max flight time in seconds - tested 
-    max_distance: float              # max travel distance in meters
+    max_distance: Optional[float]              # max travel distance in meters
     horizontal_fov: float            # camera horizontal field of view in degrees
     vertical_fov: float              # camera vertical field of view in degrees
     fps: float                       # camera frame rate in frames per second
@@ -21,6 +21,10 @@ class DroneConfig:
     turning_radius: float            # minimum turn radius in meters
     hover_buffer: float              # extra hover time for stabilization in seconds
     battery_warning_threshold: float # warning if battery % used exceeds this
+
+    def __post_init__(self):
+        if self.max_distance is None:
+            self.max_distance = self.speed * self.max_battery_time
 
 @dataclass
 class Waypoint:
@@ -287,7 +291,7 @@ def visualize_waypoints_3d(
 
 def validate_mission(drone: DroneConfig, waypoints: List[Waypoint]) -> Tuple[bool, dict]:
     """
-    Evaluate mission feasibility using real-world tested max battery time.
+    Evaluate mission feasibility using tested max battery time.
     Calculates travel time and hover time, then checks if the mission fits within limits.
     Returns feasibility as boolean and dictionary of metrics. 
     """
@@ -306,7 +310,8 @@ def validate_mission(drone: DroneConfig, waypoints: List[Waypoint]) -> Tuple[boo
     # return to origin
     last_wp = waypoints[-1]
     return_dist = math.sqrt(last_wp.x**2 + last_wp.y**2 + last_wp.z**2)
-    return_time = return_dist / (last_wp.speed or drone.speed)
+    return_time = return_dist / drone.speed #this could have same problem w1.speed -> needs to be changed to drone speed 
+    print(f"The speed of the last waypoint is: {last_wp.speed}, the return distance is: {return_dist},the return time is {return_time}")
     total_distance += return_dist
     total_travel_time += return_time
 
@@ -341,7 +346,7 @@ if __name__ == '__main__':
     cfg = DroneConfig(
         weight         = 0.292,          # kg
         max_battery_time   = 1380.0,     # seconds
-        max_distance   = 5000.0,         # meters
+        max_distance   = None,           # meters
         horizontal_fov = 82.1,           # degrees
         vertical_fov   = 52.3,           # degrees
         fps            = 60.0,           # frames per second
