@@ -242,6 +242,80 @@ def export_to_marvelmind(waypoints: List[Waypoint], filename: str):
         for idx, wp in enumerate(waypoints, start=1):
             writer.writerow([idx, wp.x, wp.y, wp.z, wp.hold_time, wp.gimbal_pitch])
 
+def export_to_dpt(waypoints: List[Waypoint], drone_config: DroneConfig, filename: str):
+    """
+    Exports waypoints and drone settings to a .dpt file format based on the provided example.
+    This function makes assumptions about fixed command sequences and some setting values.
+    """
+    lines = []
+
+    # --- Commands and Waypoints Section ---
+    lines.append(f"takeoff({drone_config.min_altitude:.2f})")
+    lines.append("pause(4.0)") # Based on your example
+    lines.append(f"height({drone_config.min_altitude:.2f})")
+    lines.append("pause(1.0)") # Based on your example
+    lines.append("waypoints_begin()")
+
+    for i, wp in enumerate(waypoints):
+        # Waypoints in .dpt format are Wxx(x,y,z)
+        lines.append(f"W{i+1:02d}({wp.x:.2f},{wp.y:.2f},{wp.z:.2f})")
+
+    lines.append("waypoints_end()")
+    lines.append("pause(1.0)") # Based on your example
+    lines.append("landing()")
+    lines.append("pause(6.0)") # Based on your example
+    lines.append("landing()") # Second landing command from example
+
+    # --- Settings Section ---
+    lines.append("\n[settings]") # Add a newline for separation and the section header
+
+    # These settings are based on the example .dpt file you provided.
+    # You might want to make some of these configurable or derive them from DroneConfig.
+    lines.append(f"set_power(10.00)")
+    lines.append(f"set_power_rot(60.00)")
+    lines.append(f"set_power_height(10.00)")
+    lines.append(f"set_waypoint_pause(2.0)") # Fixed value as requested in prior turn
+    lines.append(f"set_timeout(9.0)")
+    lines.append(f"set_scan_timeout(10.0)")
+    lines.append(f"set_waypoint_radius(0.10)")
+    lines.append(f"set_wp1_radius_coef(5.0)")
+    lines.append(f"set_waypoint_radius_z(0.10)")
+    lines.append(f"set_recalibrate_distance(0.50)")
+    lines.append(f"set_recalibrate_deviation(0.10)")
+    lines.append(f"set_min_rotation_angle(10)")
+    lines.append(f"set_angle_control_mode(0)")
+    lines.append(f"set_pid_angle_distance(0.30)")
+    lines.append(f"set_pid_angle_p(0.050)")
+    lines.append(f"set_pid_angle_i(0.005)")
+    lines.append(f"set_pid_angle_d(0.005)")
+    lines.append(f"set_sliding_window(10)")
+    lines.append(f"set_jump_sigma(0.100)")
+    lines.append(f"set_no_tracking_fly_distance(1.50)")
+    lines.append(f"set_no_tracking_a_param(0.900)")
+    lines.append(f"set_no_tracking_c_param(0.100)")
+    lines.append(f"set_no_tracking_time_coef(0.100)")
+    lines.append(f"set_overflight_distance(0.080)")
+    lines.append(f"set_overflight_samples(2)")
+    lines.append(f"set_rotation_cor(0)")
+    lines.append(f"set_min_rotation_cor(45)")
+    lines.append(f"set_stop_spot_distance(8.0)")
+    lines.append(f"set_stop_coef(0.80)")
+    lines.append(f"set_video_recording(1)")
+    lines.append(f"set_quality_hyst(30)")
+    lines.append(f"set_time_limit_coef(1.30)")
+    lines.append(f"set_reverse_brake_time(0.3)")
+    lines.append(f"set_reverse_brake_power(20.0)")
+    lines.append(f"set_reverse_brake_dist_a(0.3)")
+    lines.append(f"set_reverse_brake_dist_b(0.1)")
+    lines.append(f"set_rot_low_angle_speed(1.3)")
+    lines.append(f"set_min_speed({drone_config.speed:.2f})") # Using drone's nominal speed
+    lines.append(f"set_z_sliding_window(32)")
+
+    # Write all lines to the .dpt file
+    with open(filename, 'w') as f:
+        f.write('\n'.join(lines))
+
+
 
 def visualize_waypoints_2d(
     waypoints: List[Waypoint],
@@ -379,6 +453,7 @@ if __name__ == '__main__':
     wall_offset = 2.0
     clearance = 0.75
 
+
     for mode, axis, overlap in [('3D', '', 0.7), ('2D', 'xz', 0.7), ('1D', 'x', 0.95)]:
         print(f"\n--- {mode} Scan ---")
         wps = generate_scan(
@@ -396,6 +471,23 @@ if __name__ == '__main__':
         print(f"distance: {metrics['distance']:.1f} m, "
               f"total time: {metrics['total_time']/60:.1f} mins, "
               f"feasible: {feasible}")
+
+        # Create unique filenames for each mode and axis
+        file_suffix = f"_{mode}"
+        if axis:  # Only add axis to filename if it's specified
+            file_suffix += f"_{axis}"
+
+        csv_filename = f"waypoints{file_suffix}.csv"
+        txt_filename = f"waypoints{file_suffix}.txt"
+        dpt_filename = f"mission_path{file_suffix}.dpt"
+
+        # Export for current mode
+        export_to_marvelmind(wps, csv_filename)
+        export_to_marvelmind(wps, txt_filename)
+        export_to_dpt(wps, cfg, dpt_filename)  # Call the .dpt export function
+
+        print(f"Exported: {csv_filename}, {txt_filename}, {dpt_filename}")
+
         if mode == '3D':
             visualize_waypoints_3d(wps)
             visualize_waypoints_2d(wps)
