@@ -221,7 +221,7 @@ def export_to_marvelmind(waypoints: List[Waypoint], filename: str):
 
 def visualize_waypoints_2d(
     waypoints: List[Waypoint],
-    draw_lines: bool = False,
+    draw_lines: bool = True,
     line_kwargs: Optional[Dict] = None,
     marker_kwargs: Optional[Dict] = None
 ):
@@ -328,14 +328,14 @@ if __name__ == '__main__':
         hover_buffer   = 2        # seconds
     )
 
-    dims = (6.0, 6.0, 3.0)         # width, length, height in meters
+    dims = (6.0, 6.0, 4.0)         # width, length, height in meters
     # generate waypoints for full cube scan
     wps = generate_cube_scan(
         drone      = cfg,
         dims       = dims,
         overlap    = 0.7,           # 70% overlap
         wall_offset= 2.0,           # meters from walls
-        clearance  = 0.75           # meters margin
+        clearance  = 1.0          # meters margin
     )
 
     # validate mission feasibility
