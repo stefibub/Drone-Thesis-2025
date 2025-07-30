@@ -10,18 +10,18 @@ class DroneConfig:
     """
     holds drone settings and limits
     """
-    weight: float  # weight in kg
-    max_battery_time: float  # max flight time in seconds - tested
-    max_distance: float  # max travel distance in meters
-    horizontal_fov: float  # camera horizontal field of view in degrees
-    vertical_fov: float  # camera vertical field of view in degrees
-    fps: float  # camera frame rate in frames per second
-    resolution: Tuple[int, int]  # camera resolution in pixels (width, height)
-    speed: float  # nominal flight speed in m/s
-    min_altitude: float  # minimum safe flight altitude in meters
-    turning_radius: float  # minimum turn radius in meters
-    hover_buffer: float  # extra hover time for stabilization in seconds
-    battery_warning_threshold: float  # warning if battery % used exceeds this
+    weight: float                       # weight in kg
+    max_battery_time: float             # max flight time in seconds - tested
+    max_distance: float                 # max travel distance in meters
+    horizontal_fov: float               # camera horizontal field of view in degrees
+    vertical_fov: float                 # camera vertical field of view in degrees
+    fps: float                          # camera frame rate in frames per second
+    resolution: Tuple[int, int]         # camera resolution in pixels (width, height)
+    speed: float                        # nominal flight speed in m/s
+    min_altitude: float                 # minimum safe flight altitude in meters
+    turning_radius: float               # minimum turn radius in meters
+    hover_buffer: float                 # extra hover time for stabilization in seconds
+    battery_warning_threshold: float    # warning if battery % used exceeds this
 
 
 @dataclass
@@ -90,16 +90,25 @@ def generate_cube_scan(
         wall_offset: float,
         clearance: float = 0.0
 ) -> List[Waypoint]:
-    # unchanged
+    """
+    Generates waypoints for all cube faces, ordering each face's waypoints
+    to start nearest to the previous face's last waypoint,
+    and inserts axis-aligned transition points to avoid diagonal flight.
+    """
     w, l, h = dims
+    # Compute horizontal footprints at ceiling height
     fp_w, fp_h = calculate_footprint(drone, h)
     spacing_x = fp_w * (1 - overlap)
     spacing_y = fp_h * (1 - overlap)
     speed_xy = calculate_speed(fp_w, overlap, drone.fps)
     hold = 1.0 / drone.fps + drone.hover_buffer
     inset = wall_offset + clearance
-    all_wps: List[Waypoint] = []
-    all_wps += generate_planar_scan(
+
+    # Collect each face's waypoint list
+    faces: List[List[Waypoint]] = []
+
+    # Bottom face
+    faces.append(generate_planar_scan(
         span_long=w - 2 * inset,
         span_short=l - 2 * inset,
         spacing=spacing_x,
@@ -110,8 +119,10 @@ def generate_cube_scan(
         is_x_aligned=True,
         turning_radius=drone.turning_radius,
         hold_time=hold
-    )
-    all_wps += generate_planar_scan(
+    ))
+
+    # Top face
+    faces.append(generate_planar_scan(
         span_long=l - 2 * inset,
         span_short=w - 2 * inset,
         spacing=spacing_y,
@@ -122,19 +133,24 @@ def generate_cube_scan(
         is_x_aligned=False,
         turning_radius=drone.turning_radius,
         hold_time=hold
-    )
+    ))
+
+    # Side walls
     fp_w_wall, fp_h_wall = calculate_footprint(drone, wall_offset)
     ss = fp_w_wall * (1 - overlap)
     sh = fp_h_wall * (1 - overlap)
     speed_z = calculate_speed(fp_h_wall, overlap, drone.fps)
+
     for axis, pos in [('y', wall_offset), ('y', l - wall_offset),
                       ('x', wall_offset), ('x', w - wall_offset)]:
+        face_wps: List[Waypoint] = []
         span = w if axis == 'y' else l
         height_range = h - 2 * clearance
         nspan = max(1, math.ceil((span - 2 * wall_offset) / ss))
         nheight = max(1, math.ceil(height_range / sh))
         ds = (span - 2 * wall_offset) / nspan
         dh = height_range / nheight
+
         for i in range(nspan + 1):
             p_span = i * ds + wall_offset
             rows = (range(nheight + 1) if i % 2 == 0 else range(nheight, -1, -1))
@@ -142,7 +158,44 @@ def generate_cube_scan(
                 z_pt = j * dh + clearance
                 x = p_span if axis == 'y' else pos
                 y = pos if axis == 'y' else p_span
-                all_wps.append(Waypoint(x, y, max(z_pt, drone.min_altitude), 0.0, speed_z, hold))
+                face_wps.append(Waypoint(
+                    x, y, max(z_pt, drone.min_altitude),
+                    0.0, speed_z, hold
+                ))
+        faces.append(face_wps)
+
+    # Distance helper
+    def _dist(a: Waypoint, b: Waypoint) -> float:
+        return math.sqrt((a.x - b.x)**2 + (a.y - b.y)**2 + (a.z - b.z)**2)
+
+    # Stitch faces, reversing for nearest start and adding axis-aligned transitions
+    all_wps: List[Waypoint] = []
+    for face in faces:
+        if all_wps:
+            prev = all_wps[-1]
+            # Reverse if end is nearer than start
+            if _dist(prev, face[-1]) < _dist(prev, face[0]):
+                face.reverse()
+            # Insert axis-aligned transitions
+            start = face[0]
+            # move x then y then z
+            transitions: List[Waypoint] = []
+            # X-axis move
+            if start.x != prev.x:
+                transitions.append(Waypoint(start.x, prev.y, prev.z,
+                                             prev.gimbal_pitch, drone.speed, 0.0))
+            # Y-axis move
+            if start.y != prev.y:
+                transitions.append(Waypoint(start.x, start.y, prev.z,
+                                             prev.gimbal_pitch, drone.speed, 0.0))
+            # Z-axis move
+            if start.z != prev.z:
+                transitions.append(Waypoint(start.x, start.y, start.z,
+                                             prev.gimbal_pitch, drone.speed, 0.0))
+            all_wps.extend(transitions)
+        # Append face waypoints
+        all_wps.extend(face)
+
     return all_wps
 
 
@@ -197,33 +250,53 @@ def generate_scan(
 
     inset = wall_offset + clearance
     if mode == '2D':
-        # 2D slice on vertical plane
         if axis not in ('xz', 'yz'):
             raise ValueError(f"invalid axis for 2D scan: {axis}")
-        # define spans on long and short axes
-        span_long = dims[0] - 2 * inset if axis == 'xz' else dims[1] - 2 * inset
-        span_short = dims[2] - 2 * inset
-        # footprint computed on short axis distance
+
+        # spans and footprints
+        span_long = (dims[0] - 2*inset) if axis=='xz' else (dims[1] - 2*inset)
+        span_short = dims[2] - 2*inset
         fp_long, fp_short = calculate_footprint(drone, span_short)
         spacing_long = fp_long * (1 - overlap)
         spacing_short = fp_short * (1 - overlap)
         speed_long = calculate_speed(fp_long, overlap, drone.fps)
-        speed_short = calculate_speed(fp_short, overlap, drone.fps)
         hold = 1.0 / drone.fps + drone.hover_buffer
-        # generate grid in X-Z or Y-Z
+
+        # row/column counts
         n_long = max(1, math.ceil(span_long / spacing_long))
         n_short = max(1, math.ceil(span_short / spacing_short))
-        wps: List[Waypoint] = []
-        for i in range(n_short + 1):
-            pos_short = inset + i * span_short / n_short  # Z coordinate
-            for j in range(n_long + 1):
-                pos_long = inset + j * span_long / n_long
-                if axis == 'xz':
-                    x, y, z = pos_long, inset, pos_short
-                else:  # 'yz'
-                    x, y, z = inset, pos_long, pos_short
-                wps.append(Waypoint(x, y, z, 0.0, speed_long, hold))
-        return wps
+
+        def dist(a: Waypoint, b: Waypoint) -> float:
+            return math.hypot(a.x-b.x, math.hypot(a.y-b.y, a.z-b.z))
+
+        all_wps: List[Waypoint] = []
+        # generate each Z‑slice (row) separately
+        for i in range(n_short+1):
+            z = inset + i * span_short / n_short
+            row: List[Waypoint] = []
+            for j in range(n_long+1):
+                lon = inset + j * span_long / n_long
+                if axis=='xz':
+                    row.append(Waypoint(lon, inset, z, 0.0, speed_long, hold))
+                else:  # yz
+                    row.append(Waypoint(inset, lon, z, 0.0, speed_long, hold))
+
+            # choose orientation that minimises jump from previous
+            if all_wps:
+                prev = all_wps[-1]
+                # compare start vs end
+                if dist(prev, row[-1]) < dist(prev, row[0]):
+                    row.reverse()
+
+            all_wps.extend(row)
+
+        return all_wps
+
+    if mode == '1D':
+        return generate_linear_scan(drone, dims, overlap, wall_offset, clearance, axis)
+
+    raise ValueError(f"invalid mode: {mode}")
+
 
     if mode == '1D':
         return generate_linear_scan(drone, dims, overlap, wall_offset, clearance, axis)
@@ -274,15 +347,15 @@ def export_to_dpt(waypoints: List[Waypoint], drone_config: DroneConfig, filename
     lines.append(f"set_power(10.00)")
     lines.append(f"set_power_rot(60.00)")
     lines.append(f"set_power_height(10.00)")
-    lines.append(f"set_waypoint_pause(2.0)") # Fixed value as requested in prior turn
+    lines.append(f"set_waypoint_pause(3.0)") # Fixed value as requested in prior turn
     lines.append(f"set_timeout(9.0)")
     lines.append(f"set_scan_timeout(10.0)")
-    lines.append(f"set_waypoint_radius(0.10)")
+    lines.append(f"set_waypoint_radius(0.05)")
     lines.append(f"set_wp1_radius_coef(5.0)")
-    lines.append(f"set_waypoint_radius_z(0.10)")
+    lines.append(f"set_waypoint_radius_z(0.05)")
     lines.append(f"set_recalibrate_distance(0.50)")
     lines.append(f"set_recalibrate_deviation(0.10)")
-    lines.append(f"set_min_rotation_angle(10)")
+    lines.append(f"set_min_rotation_angle(45)")
     lines.append(f"set_angle_control_mode(0)")
     lines.append(f"set_pid_angle_distance(0.30)")
     lines.append(f"set_pid_angle_p(0.050)")
@@ -295,7 +368,7 @@ def export_to_dpt(waypoints: List[Waypoint], drone_config: DroneConfig, filename
     lines.append(f"set_no_tracking_c_param(0.100)")
     lines.append(f"set_no_tracking_time_coef(0.100)")
     lines.append(f"set_overflight_distance(0.080)")
-    lines.append(f"set_overflight_samples(2)")
+    lines.append(f"set_overflight_samples(5)")
     lines.append(f"set_rotation_cor(0)")
     lines.append(f"set_min_rotation_cor(45)")
     lines.append(f"set_stop_spot_distance(8.0)")
@@ -308,7 +381,7 @@ def export_to_dpt(waypoints: List[Waypoint], drone_config: DroneConfig, filename
     lines.append(f"set_reverse_brake_dist_a(0.3)")
     lines.append(f"set_reverse_brake_dist_b(0.1)")
     lines.append(f"set_rot_low_angle_speed(1.3)")
-    lines.append(f"set_min_speed({drone_config.speed:.2f})") # Using drone's nominal speed
+    lines.append(f"set_min_speed(0.15)") # Using drone's nominal speed
     lines.append(f"set_z_sliding_window(32)")
 
     # Write all lines to the .dpt file
@@ -448,13 +521,13 @@ if __name__ == '__main__':
         hover_buffer=10,
         battery_warning_threshold=0.85
     )
-    dims = (6.0, 6.0, 3.0)
+    dims = (7.0, 3.0, 3.0)
     overlap = 0.7
-    wall_offset = 2.0
-    clearance = 0.75
+    wall_offset = 2
+    clearance = 1.0
 
 
-    for mode, axis, overlap in [('3D', '', 0.7), ('2D', 'xz', 0.7), ('1D', 'x', 0.95)]:
+    for mode, axis, overlap in [('3D', '', 0.7), ('2D', 'xz', 0.7), ('1D', 'x', 0.7)]:
         print(f"\n--- {mode} Scan ---")
         wps = generate_scan(
             drone=cfg,
@@ -490,6 +563,6 @@ if __name__ == '__main__':
 
         if mode == '3D':
             visualize_waypoints_3d(wps)
-            visualize_waypoints_2d(wps)
+            visualize_waypoints_2d(wps, draw_lines=True)
         else:
             visualize_waypoints_2d(wps, draw_lines=True)
