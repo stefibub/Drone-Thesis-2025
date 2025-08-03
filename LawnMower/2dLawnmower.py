@@ -279,7 +279,7 @@ if __name__ == '__main__':
     wall_offset = 2.0
     clearance = 0.75
 
-    out_dir = "FlightPlanData"
+    out_dir = "2DLawnMower_FlightPlanData"
     os.makedirs(out_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     base_name = f"mission_path_lawnmower_2d_{timestamp}"
