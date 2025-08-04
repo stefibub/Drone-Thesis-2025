@@ -88,9 +88,10 @@ def generate_cube_scan(
         dims: Tuple[float, float, float],
         overlap: float,
         wall_offset: float,
-        clearance: float = 0.0
+        clearance: float = 0.0,
+        floor_z_override: Optional[float] = None,
+        ceiling_z_override: Optional[float] = None
 ) -> List[Waypoint]:
-    # unchanged
     w, l, h = dims
     fp_w, fp_h = calculate_footprint(drone, h)
     spacing_x = fp_w * (1 - overlap)
@@ -99,51 +100,83 @@ def generate_cube_scan(
     hold = 1.0 / drone.fps + drone.hover_buffer
     inset = wall_offset + clearance
     all_wps: List[Waypoint] = []
-    all_wps += generate_planar_scan(
-        span_long=w - 2 * inset,
-        span_short=l - 2 * inset,
-        spacing=spacing_x,
-        z=max(clearance, drone.min_altitude),
-        pitch=-90.0,
-        speed=speed_xy,
-        offset=inset,
-        is_x_aligned=True,
-        turning_radius=drone.turning_radius,
-        hold_time=hold
-    )
-    all_wps += generate_planar_scan(
-        span_long=l - 2 * inset,
-        span_short=w - 2 * inset,
-        spacing=spacing_y,
-        z=max(h - clearance, drone.min_altitude),
-        pitch=60.0,
-        speed=speed_xy,
-        offset=inset,
-        is_x_aligned=False,
-        turning_radius=drone.turning_radius,
-        hold_time=hold
-    )
+
+    # Top and bottom planar scans only when not overriding floor/ceiling
+    if floor_z_override is None and ceiling_z_override is None:
+        all_wps += generate_planar_scan(
+            span_long=w - 2 * inset,
+            span_short=l - 2 * inset,
+            spacing=spacing_x,
+            z=max(clearance, drone.min_altitude),
+            pitch=-90.0,
+            speed=speed_xy,
+            offset=inset,
+            is_x_aligned=True,
+            turning_radius=drone.turning_radius,
+            hold_time=hold
+        )
+        all_wps += generate_planar_scan(
+            span_long=l - 2 * inset,
+            span_short=w - 2 * inset,
+            spacing=spacing_y,
+            z=max(h - clearance, drone.min_altitude),
+            pitch=60.0,
+            speed=speed_xy,
+            offset=inset,
+            is_x_aligned=False,
+            turning_radius=drone.turning_radius,
+            hold_time=hold
+        )
+
+    # Vertical wall scans with optional overrides
     fp_w_wall, fp_h_wall = calculate_footprint(drone, wall_offset)
     ss = fp_w_wall * (1 - overlap)
     sh = fp_h_wall * (1 - overlap)
     speed_z = calculate_speed(fp_h_wall, overlap, drone.fps)
+
+    # Determine effective floor and ceiling bounds
+    default_floor_z = max(clearance, drone.min_altitude)
+    default_ceiling_z = max(h - clearance, drone.min_altitude)
+    floor_z = floor_z_override if floor_z_override is not None else default_floor_z
+    ceiling_z = ceiling_z_override if ceiling_z_override is not None else default_ceiling_z
+
+    # interior full height (without overrides) for scaling reference
+    full_height = max(0.0, default_ceiling_z - default_floor_z)
+    height_range = ceiling_z - floor_z
+    if height_range <= 0:
+        return all_wps  # nothing to do
+
+    # original vertical slice count over full height
+    original_nheight_full = max(1, math.ceil(full_height / sh)) if full_height > 0 else 1
+
+    # scale to current (possibly reduced) height_range to preserve density
+    if full_height > 0:
+        scaled_nheight = math.ceil(original_nheight_full * (height_range / full_height))
+    else:
+        scaled_nheight = 1
+    nheight = max(1, scaled_nheight)
+    dh = height_range / nheight  # interval size
+
     for axis, pos in [('y', wall_offset), ('y', l - wall_offset),
                       ('x', wall_offset), ('x', w - wall_offset)]:
         span = w if axis == 'y' else l
-        height_range = h - 2 * clearance
         nspan = max(1, math.ceil((span - 2 * wall_offset) / ss))
-        nheight = max(1, math.ceil(height_range / sh))
         ds = (span - 2 * wall_offset) / nspan
-        dh = height_range / nheight
         for i in range(nspan + 1):
             p_span = i * ds + wall_offset
-            rows = (range(nheight + 1) if i % 2 == 0 else range(nheight, -1, -1))
-            for j in rows:
-                z_pt = j * dh + clearance
+            # serpentine in z
+            if i % 2 == 0:
+                z_indices = range(nheight + 1)
+            else:
+                z_indices = range(nheight, -1, -1)
+            for j in z_indices:
+                z_pt = floor_z + j * dh
+                z_final = max(z_pt, drone.min_altitude)
                 x = p_span if axis == 'y' else pos
                 y = pos if axis == 'y' else p_span
-                all_wps.append(Waypoint(x, y, max(z_pt, drone.min_altitude), 0.0, speed_z, hold))
+                all_wps.append(Waypoint(x, y, z_final, 0.0, speed_z, hold))
     return all_wps
+
 
 
 def generate_linear_scan(
