@@ -58,6 +58,15 @@ def generate_spiral_scan(
         clearance: float,
         target_turns: int = 3,
 ) -> List[Waypoint]:
+    """
+    generating a straight-edged outward rectangular spiral of waypoints over a planar area.
+
+    The spiral starts at the center of the inset rectangle (accounting for wall_offset + clearance)
+    and expands outward in the order: right, up, left, down, with layer lengths increasing by one
+    every two directions. The step size is chosen to respect the desired camera coverage (footprint &
+    overlap) but is also constrained so that the spiral produces approximately `target_turns` concentric
+    layers before hitting the smallest span of the scan area.
+    """
     inset = wall_offset + clearance
     hold = 1.0 / drone.fps + drone.hover_buffer
 
@@ -71,22 +80,22 @@ def generate_spiral_scan(
 
     altitude = max(clearance, drone.min_altitude)
 
-    # Compute nominal footprint-based spacing (for camera coverage) but override with tighter step
+    # nominal footprint-based spacing (for camera coverage) but override with tighter step
     fp_long, fp_short = calculate_footprint(drone, altitude)
     avg_fp = (fp_long + fp_short) / 2.0
     nominal_step = avg_fp * (1 - overlap)
     speed = calculate_speed(avg_fp, overlap, drone.fps)
 
-    # Derive step so that the spiral has roughly target_turns layers before hitting the smallest span
+    # deciding on the step so that the spiral has roughly target_turns layers before hitting the smallest span
     span_x = max_x - min_x
     span_y = max_y - min_y
     min_span = min(span_x, span_y)
 
-    # Each "full turn" increases in both dimensions by 2*step (right+up+left+down),
+    # each "full turn" increases in both dimensions by 2*step (right+up+left+down),
     # so to get target_turns from center to edge, step ≈ min_span / (2*target_turns + 1)
     step = min(nominal_step, min_span / (2 * target_turns + 1))
 
-    # If nominal_step is already smaller, use it (you can also force tighter by ignoring nominal_step)
+    # note: if nominal_step is already smaller, use it (you can also force tighter by ignoring nominal_step)
     # step = min_span / (2 * target_turns + 1)  # uncomment to force exact density regardless of footprint
 
     # start at center
@@ -100,7 +109,7 @@ def generate_spiral_scan(
     layer = 1
     dir_idx = 0
 
-    # Build outward spiral until next step would exit
+    #  outward spiral until next step would exit
     while True:
         moved = False
         for _ in range(2):  # two directions per layer count
@@ -120,6 +129,14 @@ def generate_spiral_scan(
     return wps
 
 def reduce_waypoints_collinear(waypoints: List[Waypoint], eps=1e-6) -> List[Waypoint]:
+    """
+    removing intermediate waypoints that lie collinearly on straight segments.
+
+    logic: preserves the first and last waypoint. For any triplet (prev, curr, next), if curr lies
+    exactly on the same line and direction as prev→next (within tolerance), it is skipped,
+    reducing redundancy along straight legs.
+    returns: reduced list of waypoints with unnecessary intermediate points removed.
+    """
     if len(waypoints) <= 2:
         return waypoints.copy()
     reduced = [waypoints[0]]
