@@ -358,6 +358,6 @@ if __name__ == '__main__':
     print(f"mission feasible: {feasible}")
 
     # export and visualize
-    export_to_marvelmind(wps, 'waypoints.csv')
+    export_to_marvelmind(wps, '../../../Downloads/waypoints.csv')
     visualize_waypoints_2d(wps)
     visualize_waypoints_3d(wps)

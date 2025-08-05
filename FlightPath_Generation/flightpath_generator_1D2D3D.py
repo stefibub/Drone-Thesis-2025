@@ -521,7 +521,7 @@ if __name__ == '__main__':
         hover_buffer=10,
         battery_warning_threshold=0.85
     )
-    dims = (7.0, 3.0, 3.0)
+    dims = (5.0, 5.0, 4.0)
     overlap = 0.7
     wall_offset = 2
     clearance = 1.0
