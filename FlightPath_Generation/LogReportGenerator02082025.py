@@ -392,23 +392,23 @@ def analyze_and_report_with_plots(file_path, output_path, path_file=None, worksp
     # write markdown report
     with open(output_path, 'w') as rpt:
         rpt.write("# Marvelmind System Performance Report\n\n")
-        rpt.write("## 1. Position Stability (σ)\n")
+        rpt.write("## Position Stability (σ)\n")
         rpt.write(f"- x: {stability['x']:.3f} m\n")
         rpt.write(f"- y: {stability['y']:.3f} m\n")
         rpt.write(f"- z: {stability['z']:.3f} m\n\n")
 
-        rpt.write("## 2. Data Availability\n")
+        rpt.write("## Data Availability\n")
         rpt.write(f"- {availability_pct:.2f}% ({avail}/{total})\n\n")
 
-        rpt.write("## 3. Latency\n")
+        rpt.write("## Latency\n")
         rpt.write(f"- avg: {latency_avg:.1f} ms\n")
         rpt.write(f"- σ: {latency_sd:.1f} ms\n\n")
 
-        rpt.write("## 4. Update Rate\n")
+        rpt.write("## Update Rate\n")
         rpt.write(f"- avg: {update_avg:.1f} Hz\n")
         rpt.write(f"- σ: {update_sd:.1f} Hz\n\n")
 
-        rpt.write("## 5. Signal Quality\n")
+        rpt.write("## Signal Quality\n")
         if volt_avg is not None:
             rpt.write(f"- voltage: avg {volt_avg:.2f} V, σ {volt_sd:.2f} V\n")
             rpt.write(f"- rssi: avg {rssi_avg:.1f} dBm, σ {rssi_sd:.1f} dBm\n")
@@ -416,7 +416,7 @@ def analyze_and_report_with_plots(file_path, output_path, path_file=None, worksp
         else:
             rpt.write("- no telemetry/quality data found\n\n")
 
-        rpt.write("## 6. Coordinate Resolution\n")
+        rpt.write("## Coordinate Resolution\n")
         rpt.write(f"- x: {res_x} m\n")
         rpt.write(f"- y: {res_y} m\n")
         rpt.write(f"- z: {res_z} m\n")
@@ -432,9 +432,9 @@ def analyze_and_report_with_plots(file_path, output_path, path_file=None, worksp
 
 if __name__ == '__main__':
     workspace_dims = {'x': 6.0, 'y': 6.0, 'z': 5.0}
-    log_file = '/Users/benjamindrury/Downloads/2025_08_01__152835__Marvelmind_log.csv'
+    log_file = '/Users/benjamindrury/Downloads/2025_08_05__132542__Marvelmind_logFlight4.csv'
     report_file = 'marvelmind_report.md'
-    path_file = '/Users/benjamindrury/Downloads/waypoints.csv'
+    path_file = '/Users/benjamindrury/Downloads/2d_lawnmower_24wp_20250805_105634.csv'
     analyze_and_report_with_plots(
         log_file,
         report_file,
