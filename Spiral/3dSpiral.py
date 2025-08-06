@@ -373,7 +373,7 @@ if __name__ == '__main__':
         vertical_fov   = 52.3,  # placeholder; will recompute from aspect
         fps            = 60.0,
         resolution     = (2720, 1530),
-        speed          = 0.5,
+        speed          = 0.4,
         min_altitude   = 1.0,
         turning_radius = 1.0,
         hover_buffer   = 2,
@@ -381,7 +381,7 @@ if __name__ == '__main__':
     )
 
     # room definition and margins
-    dims = (6.0, 6.0, 3.0)  # width, length, height in meters
+    dims = (5.0, 5.0, 2.1)  # width, length, height in meters
     clearance = 0.2         # vertical inset from ceiling
     margin = 0.5            # horizontal inset from walls
     start_z = 0.5           # starting altitude
@@ -454,7 +454,7 @@ if __name__ == '__main__':
     out_dir = "3DSpiral_FlightPlanData"
     os.makedirs(out_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    base_name = f"mission_path_lawnmower_2d_{timestamp}"
+    base_name = f"mission_path_spiral_3d_{timestamp}"
 
     # output results 
     print("\n=== Helical trajectory generated ===")
