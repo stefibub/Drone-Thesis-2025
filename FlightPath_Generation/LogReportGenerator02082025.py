@@ -554,10 +554,10 @@ def analyze_and_report_with_plots(file_path, output_path, path_file=None, worksp
 
 
 if __name__ == '__main__':
-    workspace_dims = {'x': 6.0, 'y': 6.0, 'z': 5.0}
-    log_file    = '/Users/stefaniaconte/Desktop/Drone-Thesis-2025/LogFiles/2dLawnmower_24wp_logfiles.csv'
-    report_file = 'marvelmind_report.md'
-    path_file   = '/Users/stefaniaconte/Desktop/Drone-Thesis-2025/FlightPaths/CsvFiles/2d_lawnmower_24wp_20250805_105634.csv'
+    workspace_dims = {'x': 6.0, 'y': 6.0, 'z': 2.0}
+    log_file    = '/Users/benjamindrury/Desktop/Thesis Results/3dLawnmowerTest/3dLawnmower_Test/2025_08_06__194047__Marvelmind_logFlight_3DSpiral.csv'
+    report_file = ('marvelmind_report_3dLawnmower_Test1.md')
+    path_file   = '/Users/benjamindrury/PycharmProjects/Drone-Thesis-2025/FlightPaths/CsvFiles/mission_path_lawnmower_3d_20250805_232642.csv'
 
     analyze_and_report_with_plots(
         log_file,
