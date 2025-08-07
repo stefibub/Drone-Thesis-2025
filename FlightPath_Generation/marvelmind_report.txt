@@ -1,0 +1,25 @@
+# Marvelmind System Performance Report
+
+## Position Stability (σ)
+- x: 0.928 m
+- y: 0.683 m
+- z: 1.009 m
+
+## Data Availability
+- 95.72% (17964/18767)
+
+## Latency
+- avg: 106.2 ms
+- σ: 11.9 ms
+
+## Update Rate
+- avg: 6.1 Hz
+- σ: 1.9 Hz
+
+## Signal Quality
+- no telemetry/quality data found
+
+## Coordinate Resolution
+- x: 0.0009999999999994458 m
+- y: 0.0009999999999994458 m
+- z: 0.0009999999999998899 m
