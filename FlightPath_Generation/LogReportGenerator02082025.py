@@ -1,3 +1,15 @@
+"""
+  _                _____                           _   _
+ | |              / ____|                         | | (_)
+ | | ___   __ _  | |  __  ___ _ __   ___ _ __ __ _| |_ _  ___  _ __
+ | |/ _ \ / _` | | | |_ |/ _ \ '_ \ / _ \ '__/ _` | __| |/ _ \| '_ \
+ | | (_) | (_| | | |__| |  __/ | | |  __/ | | (_| | |_| | (_) | | | |
+ |_|\___/ \__, |  \_____|\___|_| |_|\___|_|  \__,_|\__|_|\___/|_| |_|
+           __/ |
+          |___/
+
+"""
+
 import os
 import pandas as pd
 import numpy as np
@@ -554,10 +566,10 @@ def analyze_and_report_with_plots(file_path, output_path, path_file=None, worksp
 
 
 if __name__ == '__main__':
-    workspace_dims = {'x': 6.0, 'y': 6.0, 'z': 2.0}
-    log_file    = '/Users/benjamindrury/PycharmProjects/Drone-Thesis-2025/Results_Plots_RawData/Full Room Scans/Run3/RawMarvelmind/2025_08_09__183910__Marvelmind_logFlight_Spiral2D.csv'
-    report_file = ('marvelmind_report_3dSprial_FullRoom3.md')
-    path_file   = '/Users/benjamindrury/PycharmProjects/Drone-Thesis-2025/FlightPaths/CsvFiles/FullRoomRoute.csv'
+    workspace_dims = {'x': 7.22, 'y': 3.835, 'z': 2.4}
+    log_file    = ('/Users/benjamindrury/PycharmProjects/Drone-Thesis-2025/Results_Plots_RawData/Full Room Scans/Run6_€/RawMarvelmind/2025_08_11__141356__Marvelmind_logFlight_FullRoom11082025.csv')
+    report_file = ('marvelmind_report_3dSprial_FullRoom7.md')
+    path_file   = '/Users/benjamindrury/PycharmProjects/Drone-Thesis-2025/FlightPaths/CsvFiles/Route_11082025.csv'
 
     analyze_and_report_with_plots(
         log_file,
@@ -565,3 +577,4 @@ if __name__ == '__main__':
         path_file=path_file,
         workspace_dims=workspace_dims
     )
+
