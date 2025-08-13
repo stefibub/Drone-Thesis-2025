@@ -567,9 +567,9 @@ def analyze_and_report_with_plots(file_path, output_path, path_file=None, worksp
 
 if __name__ == '__main__':
     workspace_dims = {'x': 7.22, 'y': 3.835, 'z': 2}
-    log_file    = '/Users/benjamindrury/PycharmProjects/Drone-Thesis-2025/Results_Plots_RawData/Full Room Scans/Run11/RawMarvelmind/2025_08_12__164422__Marvelmind_log_12082025.csv'
-    report_file = '../Results_Plots_RawData/Full Room Scans/Run11/marvelmind_report_3dSprial_FullRoom11.md'
-    path_file   = '/Users/benjamindrury/PycharmProjects/Drone-Thesis-2025/FlightPaths/CsvFiles/DPT2CSV_FullroomConversions/Run11.csv'
+    log_file    = '/Users/benjamindrury/PycharmProjects/Drone-Thesis-2025/Results_Plots_RawData/Full Room Scans/Run14/RawMarvelmind/2025_08_13__182615__Marvelmind_log_13082025.csv'
+    report_file = '../Results_Plots_RawData/Full Room Scans/Run14/marvelmind_report_3dSprial_FullRoom14.md'
+    path_file   = '/Users/benjamindrury/PycharmProjects/Drone-Thesis-2025/FlightPaths/CsvFiles/DPT2CSV_FullroomConversions/Run14.csv'
 
     analyze_and_report_with_plots(
         log_file,
