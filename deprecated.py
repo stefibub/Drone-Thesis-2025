@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 from dash import Dash, dcc, html, Input, Output, State, ctx, no_update
 import base64, pathlib
 from dash.dependencies import ALL
+import LogReportGenerator02082025
 
 # ============================================================
 # ========  YOUR ORIGINAL DATA STRUCTURES / LOGIC  ==========
@@ -554,11 +555,17 @@ def render_txt(waypoints: List[Waypoint]) -> str:
 
 app = Dash(__name__, suppress_callback_exceptions=True, title="Room Scan Flightpath")
 server = app.server  # for Gunicorn / PaaS
+server.config["MAX_CONTENT_LENGTH"] = 64 * 1024 * 1024   # 64 MB
 logo_path = pathlib.Path("/Users/stefaniaconte/Desktop/FlightGenerator_App/ucd_logo.jpg")
-logo_b64 = base64.b64encode(logo_path.read_bytes()).decode()
+try:
+    logo_b64 = base64.b64encode(logo_path.read_bytes()).decode()
+    logo_src = f"data:image/jpeg;base64,{logo_b64}"
+except Exception:
+    logo_src = None
 
 # ---- Component IDs ----
 IDS = dict(
+    # existing app controls
     tabs="tabs",
     graph="graph",
     metrics="metrics",
@@ -575,6 +582,17 @@ IDS = dict(
     dl_txt="dl-txt",
     dl_dpt="dl-dpt",
     error="error",
+
+    # home page “Generate Flight Report” navigation (you already had these)
+    btn_report="btn-report",
+    btn_report_link="btn-report-link",
+
+    # report page (must match the callbacks I sent)
+    upload_log="upload-log",
+    upload_path="upload-path",              # <-- use this name (not upload_flightpath)
+    btn_run_report="btn-run-report",        # <-- missing before
+    store_report_bundle="store-report-bundle",  # <-- missing before
+    report_output="report-output",          # <-- use this name (not report_status)
 )
 
 # ---- Defaults ----
@@ -610,10 +628,140 @@ TITLE_STYLE = {
 }
 TIP_ICON_STYLE = {"cursor": "help", "color": "#888", "marginLeft": "6px", "fontWeight": 600}
 
+REPORT_BTN_STYLE = {
+    "background": "#10b981",    # emerald green
+    "color": "white",
+    "padding": "12px 20px",
+    "fontSize": "16px",
+    "fontWeight": "600",
+    "border": "none",
+    "borderRadius": "12px",
+    "cursor": "pointer",
+    "boxShadow": "0 2px 6px rgba(16,185,129,0.4)",
+    "minWidth": "240px",
+}
+
+UPLOAD_STYLE = {
+    "borderWidth": "2px",
+    "borderStyle": "dashed",
+    "borderColor": "#d1d5db",
+    "borderRadius": "12px",
+    "textAlign": "center",
+    "padding": "24px 12px",
+    "background": "#fafafa",
+}
+HOME_STYLE = {
+    "display": "grid",
+    "gridTemplateColumns": "minmax(380px, 460px) 1fr",
+    "gap": "16px",
+    "padding": "16px",
+    "alignItems": "start",
+}
+REPORT_STYLE = {"display": "block", "padding": "16px"}
+HIDDEN = {"display": "none"}
+
+# ---- report generator layout -----
+
+
+def report_page_layout():
+    return html.Div(
+        id="report-page",
+        style={"display": "none", "padding": "16px"},
+        children=[
+            dcc.Store(id=IDS["store_report_bundle"]),
+            html.H2("Generate Flight Report", style={"marginTop": 0}),
+            html.P("Upload the raw Marvelmind log (.csv) and the planned flightpath (.csv), then click Run Report."),
+
+            # Uploads
+            html.Div(
+                style={
+                    "display": "grid",
+                    "gridTemplateColumns": "repeat(2, minmax(260px, 1fr))",
+                    "gap": "12px",
+                    "alignItems": "stretch",
+                    "margin": "12px 0 8px",
+                },
+                children=[
+                    dcc.Upload(
+                        id=IDS["upload_log"],
+                        children=html.Div([
+                            html.Strong("Log file (.csv)"),
+                            html.Div("Drag & drop or click to upload", style={"color": "#666", "fontSize": "12px"})
+                        ]),
+                        multiple=False,
+                        accept=".csv",
+                        style={
+                            "border": "2px dashed #d1d5db",
+                            "borderRadius": "12px",
+                            "padding": "16px",
+                            "textAlign": "center",
+                            "cursor": "pointer",
+                            "background": "#fafafa",
+                        },
+                    ),
+                    dcc.Upload(
+                        id=IDS["upload_path"],
+                        children=html.Div([
+                            html.Strong("Flightpath (.csv)"),
+                            html.Div("Drag & drop or click to upload", style={"color": "#666", "fontSize": "12px"})
+                        ]),
+                        multiple=False,
+                        accept=".csv",
+                        style={
+                            "border": "2px dashed #d1d5db",
+                            "borderRadius": "12px",
+                            "padding": "16px",
+                            "textAlign": "center",
+                            "cursor": "pointer",
+                            "background": "#fafafa",
+                        },
+                    ),
+                ],
+            ),
+
+            # Run button (enabled only when both uploads present)
+            html.Div(
+                style={"display": "flex", "justifyContent": "center", "margin": "12px 0 20px"},
+                children=[
+                    html.Button(
+                        "Run report",
+                        id=IDS["btn_run_report"],
+                        n_clicks=0,
+                        disabled=True,
+                        style={
+                            "padding": "12px 18px",
+                            "background": "#10b981",
+                            "color": "white",
+                            "border": "none",
+                            "borderRadius": "12px",
+                            "fontWeight": 700,
+                            "fontSize": "16px",
+                            "cursor": "not-allowed",
+                            "opacity": 0.5,
+                            "boxShadow": "0 2px 6px rgba(16,185,129,0.3)",
+                        },
+                        title="Upload both files to enable",
+                    ),
+                ],
+            ),
+
+            # Output area: markdown + images (collapsible)
+            html.Div(id=IDS["report_output"], style={"maxWidth": "980px", "margin": "0 auto"}),
+        ],
+    )
+
+
+
+
+
+
+
+
 # ---- Layout ----
 app.layout = html.Div(
     className="app",
     children=[
+        dcc.Location(id="url", refresh=False), 
         dcc.Store(id=IDS["store_wps"]),
         dcc.Store(id=IDS["store_metrics"]),
         dcc.Store(id=IDS["store_cfg"], data={"scan_mode": "2D"}),
@@ -646,18 +794,19 @@ app.layout = html.Div(
                 ]),
                 html.A(
                     html.Img(
-                        src=f"data:image/jpeg;base64,{logo_b64}",
-                        style={"height": "40px", "width": "auto"},
+                        src= logo_src,
+                        style={"height": "40px", "width": "auto"} if logo_src else {"display": "none"},
                         alt="University Logo",
                     ),
                     href="#",  # put your university/site URL if you want it clickable
                     target="_blank",
-                    style={"display": "inline-block"},
+                    style={"display": "inline-block"} if logo_src else {"display": "none"},
                 ),
             ],
         ),
 
         html.Div(
+            id = "home-page",
             className="container",
             style={"display": "grid", "gridTemplateColumns": "minmax(380px, 460px) 1fr", "gap": "16px", "padding": "16px", "alignItems": "start"},
             children=[
@@ -862,7 +1011,7 @@ app.layout = html.Div(
                             html.Div(id="dz-container", style={"marginTop": "8px"}, children=[]),
                         ],
                     ),
-
+                        
 
                         html.Hr(),
 
@@ -893,10 +1042,6 @@ app.layout = html.Div(
                                 html.Div("Click “Generate Path” to see metrics.", style={"color": "#666", "marginTop": "6px"}),
                             ],
                         ),
-
-
-
-
 
                         html.Div(
                             style={"display": "grid", "gridTemplateColumns": "repeat(3,1fr)", "gap": "6px"},
@@ -955,6 +1100,18 @@ app.layout = html.Div(
                                                 html.Button("Pause", id=IDS["pause"], n_clicks=0),
                                             ],
                                         ),
+                                        html.Div(
+                                            id="report-controls",
+                                            style={"display": "flex", "justifyContent": "center", "marginTop": "12px"},
+                                            children=[
+                                                dcc.Link(
+                                            html.Button("Generate Flight Report", id=IDS["btn_report"], n_clicks=0, style=REPORT_BTN_STYLE),
+                                            href="/report",
+                                            id=IDS["btn_report_link"],
+                                            refresh=False,
+                                        ),
+                                            ],
+                                        ),
                                     ],
                                 ),
                             ],
@@ -963,11 +1120,10 @@ app.layout = html.Div(
                 ),
             ],
         ),
+report_page_layout(),
     ],
-)
-                                          
-
-
+)    
+                        
 # ===================== Helpers =====================
 
 def wps_to_df(wps: List[Waypoint]) -> pd.DataFrame:
@@ -1407,6 +1563,24 @@ def render_metrics_card(_metrics: dict, df: pd.DataFrame, mode: str) -> html.Div
         battery_warning = battery_used_pct >= (drone.battery_warning_threshold * 100.0)
         distance_ok = total_distance <= drone.max_distance
 
+        # ---- CALIBRATION (3D ONLY) ----
+        # Choose ONE strategy: (A) fixed/size-scaled bump or (B) target total.
+        CALIB_EXTRA_FIXED_S  = 0   # e.g., 180.0 adds 3 minutes to every 3D mission
+        CALIB_EXTRA_PER_WP_S = 5   # e.g., 0.5 adds 0.5 s per waypoint
+        CALIB_TARGET_TOTAL_S = None  # e.g., 16*60 to target 16 minutes
+
+        if CALIB_TARGET_TOTAL_S is not None:
+            _extra = max(0.0, float(CALIB_TARGET_TOTAL_S) - float(total_time))
+        else:
+            _extra = float(CALIB_EXTRA_FIXED_S) + float(CALIB_EXTRA_PER_WP_S) * n_pts
+
+        if _extra > 0.0:
+            fixed_overhead_time += _extra
+            total_time          += _extra
+            battery_used_pct     = (total_time / drone.max_battery_time) * 100.0
+            battery_ok           = battery_used_pct <= 100.0
+            battery_warning      = battery_used_pct >= (drone.battery_warning_threshold * 100.0)
+
         metrics = dict(
             distance=total_distance,
             distance_takeoff=distance_takeoff,
@@ -1431,7 +1605,7 @@ def render_metrics_card(_metrics: dict, df: pd.DataFrame, mode: str) -> html.Div
         )
 
     # ---------- render (same card layout you use) ----------
-    n_wps_display = len(df)  # old print used "Total waypoints" = len(waypoints)
+    n_wps_display = len(df)
     d_take = metrics["distance_takeoff"]
     d_cru = metrics["distance_cruise"]
     d_land = metrics["distance_landing"]
@@ -1498,6 +1672,124 @@ def render_metrics_card(_metrics: dict, df: pd.DataFrame, mode: str) -> html.Div
     )
 
 
+def _decode_upload(contents: str) -> bytes:
+    if not contents:
+        return None
+    try:
+        header, b64data = contents.split(",", 1)
+    except ValueError:
+        b64data = contents
+    return base64.b64decode(b64data)
+
+@app.callback(
+    Output(IDS["store_report_bundle"], "data"),
+    Output(IDS["report_output"], "children"),
+    Input(IDS["btn_run_report"], "n_clicks"),
+    State(IDS["upload_log"], "contents"),
+    State(IDS["upload_log"], "filename"),
+    State(IDS["upload_path"], "contents"),
+    State(IDS["upload_path"], "filename"),
+    State(IDS["store_cfg"], "data"),
+    prevent_initial_call=True,
+)
+def run_report(n_clicks, log_contents, log_name, path_contents, path_name, cfg):
+    if not n_clicks:
+        return no_update, no_update
+    if not log_contents:
+        return no_update, html.Div("Please upload a log file.", style={"color":"crimson"})
+
+    # Helper: make any dict/list JSON-safe (bytes -> base64 string)
+    def _to_json_safe(v):
+        if isinstance(v, (bytes, bytearray)):
+            return base64.b64encode(v).decode("ascii")
+        if isinstance(v, dict):
+            return {k: _to_json_safe(x) for k, x in v.items()}
+        if isinstance(v, (list, tuple)):
+            return [_to_json_safe(x) for x in v]
+        return v
+
+    # Decode uploads
+    try:
+        log_bytes = _decode_upload(log_contents)
+        flight_bytes = _decode_upload(path_contents) if path_contents else None
+    except Exception as e:
+        return no_update, html.Div(f"Failed to read uploads: {e}", style={"color":"crimson"})
+
+    # Workspace dims from current config (optional)
+    L = (cfg or {}).get("L"); W = (cfg or {}).get("W"); H = (cfg or {}).get("H")
+    dims = {"x": (0.0, L), "y": (0.0, W), "z": (0.0, H)} if all(v is not None for v in (L, W, H)) else None
+
+    # Build the report bundle
+    try:
+        bundle = LogReportGenerator02082025.generate_report_bundle(
+            log_bytes=log_bytes,
+            flightpath_bytes=flight_bytes,
+            workspace_dims=dims
+        )
+    except Exception as e:
+        return no_update, html.Div(f"Report failed: {e}", style={"color":"crimson"})
+
+    report_md = bundle.get("report_md") or ""
+    figures = bundle.get("figures") or {}     # filename -> raw base64 (no prefix)
+    sections = bundle.get("sections") or []   # [{id,title,figs:[...]}]
+
+    # Order figures using sections first
+    ordered = []
+    for s in sections:
+        for fname in s.get("figs", []):
+            if fname in figures and fname not in ordered:
+                ordered.append(fname)
+    for fname in figures:
+        if fname not in ordered:
+            ordered.append(fname)
+
+    # Build collapsible figure blocks
+    fig_blocks = []
+    for fname in ordered:
+        b64 = figures.get(fname)
+        if not b64:
+            continue
+        fig_blocks.append(
+            html.Details(
+                open=False,
+                children=[
+                    html.Summary(fname),
+                    html.Img(
+                        src="data:image/png;base64," + b64,
+                        style={"maxWidth":"100%","borderRadius":"10px","marginTop":"8px","boxShadow":"0 1px 6px rgba(0,0,0,0.08)"}
+                    ),
+                ],
+                style={"margin":"10px 0"},
+            )
+        )
+
+    output_children = [
+        html.Div(
+            [
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.Div(f"Log: {log_name or '—'}", style={"fontSize": 12, "color": "#555"}),
+                                html.Div(f"Flightpath: {path_name or '—'}", style={"fontSize": 12, "color": "#555"}),
+                            ],
+                            style={"marginBottom": "8px"},
+                        ),
+                        dcc.Markdown(report_md, link_target="_blank"),
+                    ],
+                    style={"background":"white","border":"1px solid #e5e7eb","borderRadius":"12px","padding":"16px"},
+                ),
+                html.Div(fig_blocks, style={"marginTop":"12px"}),
+            ],
+            style={"display":"grid","rowGap":"12px"},
+        )
+    ]
+
+    #  Make the bundle safe for dcc.Store (no raw bytes)
+    safe_bundle = _to_json_safe(bundle)
+    return safe_bundle, output_children
+
+   
 
 
 
@@ -1638,8 +1930,6 @@ def scrub(step_value, wps_data, cfg):
     State("altitude", "value"),
     prevent_initial_call=False,
 )
-
-
 def render_dz_inputs(n_layers, alt_val):
     try:
         n = int(n_layers or 1)
@@ -1747,8 +2037,70 @@ def download_dpt(nc, wps_data):
     dpt_text = render_dpt(wps, DEFAULT_DRONE)
     return dict(content=dpt_text, filename="mission.dpt")
 
+@app.callback(
+    Output(IDS["btn_run_report"], "disabled"),
+    Output(IDS["btn_run_report"], "style"),
+    Input(IDS["upload_log"], "contents"),
+    Input(IDS["upload_path"], "contents"),
+)
+def toggle_run_button(log_contents, path_contents):
+    base_style = {
+        "padding": "12px 18px",
+        "background": "#10b981",
+        "color": "white",
+        "border": "none",
+        "borderRadius": "12px",
+        "fontWeight": 700,
+        "fontSize": "16px",
+        "boxShadow": "0 2px 6px rgba(16,185,129,0.3)",
+        "cursor": "pointer",
+        "opacity": 1.0,
+    }
+    ready = bool(log_contents) and bool(path_contents)
+    if not ready:
+        base_style["cursor"] = "not-allowed"
+        base_style["opacity"] = 0.5
+    return (not ready), base_style
+
+
+@app.callback(
+    Output(IDS["upload_log"], "children"),
+    Output(IDS["upload_path"], "children"),
+    Input(IDS["upload_log"], "filename"),
+    Input(IDS["upload_path"], "filename"),
+)
+def _show_uploaded_names(log_name, path_name):
+    def box(title, fname):
+        return html.Div([
+            html.Strong(title),
+            html.Div(
+                (fname or "Drag & drop or click to upload"),
+                style={"color": "#666", "fontSize": "12px"}
+            ),
+        ])
+    return box("Log file (.csv)", log_name), box("Flightpath (.csv)", path_name)
+
+@app.callback(
+    Output(IDS["btn_report_link"], "style"),
+    Input(IDS["store_wps"], "data"),
+)
+def show_report_link(wps):
+    return {"display": "inline-block"} if wps else {"display": "none"}
+
+@app.callback(
+    Output("home-page", "style"),
+    Output("report-page", "style"),
+    Input("url", "pathname"),
+)
+def route(pathname):
+    if pathname == "/report":
+        return HIDDEN, REPORT_STYLE
+    # default = home
+    return HOME_STYLE, HIDDEN
+
 
 # ---------------- Run (local dev) ----------------
 # For hosted PaaS, use: gunicorn app:server
 if __name__ == "__main__":
-    app.run_server(debug=True, host="0.0.0.0", port=8050)
+    app.run_server(debug=True, use_reloader=False, host="127.0.0.1", port=8051)
+
