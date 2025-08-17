@@ -99,11 +99,13 @@ To evaluate the effectiveness of the generated flightpaths, we compared reconstr
 </p>  
 
 ### Reconstruction Technologies: Photogrammetry vs NeRF  
-The end goal was to be able to reconstruct a 3D space, as accurately as possible, by only using a single video taken from the drone during the flight mission. 
+The end goal was to evaluate the effectiveness of the generated flightpaths through the reconstructions obtained with **traditional photogrammetry** and with **Neural Radiance Fields (NeRF)**. Both methods used the same input data collected from our drone flight missions.
+
 <p align="center">
   <img src="assets/photogrammetry_result.png" alt="Photogrammetry Result" width="400"/>
   <img src="assets/nerf_result.png" alt="NeRF Result" width="400"/>
 </p> 
+
 - **Photogrammetry (PolyCam)**: While capable of reconstructing the overall geometry of a room, photogrammetry often struggles with textureless surfaces, varying lighting, and fine details. Reconstructions are typically incomplete or require significant manual post-processing.  
 - **NeRF (Luma AI)**: Provides a continuous volumetric representation, capturing fine structural and photometric details with fewer input images. The results demonstrate smoother reconstructions and more realistic rendering of the scanned environment.
 
