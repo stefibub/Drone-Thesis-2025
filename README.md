@@ -94,8 +94,8 @@ Drone-Thesis-2025/
 The end goal was to evaluate the effectiveness of the generated flightpaths through the reconstructions obtained with **traditional photogrammetry** and with **Neural Radiance Fields (NeRF)**. Both methods used the same input data collected from our drone flight missions.
 
 <p align="center">
-  <img src="assets/photogrammetry_result.png" alt="Photogrammetry Result" width="400"/>
-  <img src="assets/nerf_result.png" alt="NeRF Result" width="400"/>
+  <img src="assets/photogrammetry_results.png" alt="Photogrammetry Result" width="400"/>
+  <img src="assets/nerf_results.png" alt="NeRF Result" width="400"/>
 </p> 
 
 - **Photogrammetry (PolyCam)**: While capable of reconstructing the overall geometry of a room, photogrammetry often struggles with textureless surfaces, varying lighting, and fine details. Reconstructions are typically incomplete or require significant manual post-processing.  
