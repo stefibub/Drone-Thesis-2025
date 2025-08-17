@@ -60,7 +60,7 @@ With just a few inputs, users are able to:
 ## Repository Structure  
 
 The repository contains both the source code for the dashboard and the datasets collected from flight experiments.  
-
+```
 Drone-Thesis-2025/
 │
 ├── 2D_Logs_Data/ # Logged flight data from 2D scanning missions (different shapes (spiral, lawnmower), nr. waypoints, heights etc.)
@@ -78,6 +78,7 @@ Drone-Thesis-2025/
 │
 ├── README.md # Project documentation
 └── ThesisPlan.xlsx # Gantt chart outlining thesis timeline and tasks 
+```
 
 ## Usage  
 1. Clone this repository.  
@@ -138,9 +139,10 @@ If you use this repository in your research, please cite:
   year={2025},
   howpublished={GitHub Repository},
 }
+```
 
 ## Contact  
-For questions or collaborations, please contact:  
+For questions or bugs, please contact:  
 - droneteambsj@gmail.com
 Contributions are welcome via pull requests or issues.  
 
