@@ -35,12 +35,10 @@ In this way, our work bridges the gap between manual surveying methods and robot
 ## Features  
 The **Flightpath Generator Dashboard** is designed to make drone mission planning simple, efficient, and accessible.  
 
-<p align="center">
-  <figure style="text-align:center;">
-    <img src="assets/dashboard.png" alt="Fìs Dashboard Initial Page" width="600"/>
-    <figcaption>Fìs Dashboard – Initial interface for flightpath generation</figcaption>
-  </figure>
-</p>
+<div align="center">
+  <img src="assets/dashboard.png" alt="Fìs Dashboard Initial Page" width="600"/><br/>
+  <sub>Fìs Dashboard – Initial interface for flightpath generation</sub>
+</div>
 
 With just a few inputs, users are able to:  
 
@@ -96,16 +94,16 @@ Drone-Thesis-2025/
 ### Reconstruction Technologies: Photogrammetry vs NeRF  
 The end goal was to evaluate the effectiveness of the generated flightpaths through the reconstructions obtained with **traditional photogrammetry** and with **Neural Radiance Fields (NeRF)**. Both methods used the same input data collected from our drone flight missions.
 
-<p align="center">
-  <figure style="display:inline-block; margin:10px; text-align:center;">
-    <img src="assets/photogrammetry_results.png" alt="Photogrammetry Result" height="300"/>
-    <figcaption>Photogrammetry example (PolyCam)</figcaption>
-  </figure>
-  <figure style="display:inline-block; margin:10px; text-align:center;">
-    <img src="assets/nerf_results.png" alt="NeRF Result" height="300"/>
-    <figcaption>NeRF example (Luma AI)</figcaption>
-  </figure>
-</p>
+<div align="center">
+  <div style="display:inline-block; margin:10px; text-align:center;">
+    <img src="assets/photogrammetry_results.png" alt="Photogrammetry Result" height="300"/><br/>
+    <sub>Photogrammetry example (PolyCam)</sub>
+  </div>
+  <div style="display:inline-block; margin:10px; text-align:center;">
+    <img src="assets/nerf_results.png" alt="NeRF Result" height="300"/><br/>
+    <sub>NeRF example (Luma AI)</sub>
+  </div>
+</div>
 
 
 - **Photogrammetry (PolyCam)**: While capable of reconstructing the overall geometry of a room, photogrammetry often struggles with textureless surfaces, varying lighting, and fine details. Reconstructions are typically incomplete or require significant manual post-processing.  
@@ -115,12 +113,10 @@ The end goal was to evaluate the effectiveness of the generated flightpaths thro
 ## Additional Features - Future Work  
 In addition to the standard dashboard functionalities, we developed an **extended version** of the system: the **Target Flight Dashboard**. This version allows users not only to generate complete flightpaths but also to focus on **specific regions of interest within a room**.  
 
-<p align="center">
-  <figure style="text-align:center;">
-    <img src="assets/target_flights.png" alt="Target Flight Dashboard" width="800"/>
-    <figcaption>Target Flight Dashboard – voxel grid partitioning and region selection for targeted flights</figcaption>
-  </figure>
-</p>
+<figure style="margin:auto; text-align:center;">
+  <img src="assets/target_flights.png" alt="Target Flight Dashboard" width="800"/>
+  <figcaption>Target Flight Dashboard – voxel grid partitioning and region selection for targeted flights</figcaption>
+</figure>
 
 
 Key features include:  
