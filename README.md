@@ -89,14 +89,6 @@ Drone-Thesis-2025/
 6. Use the drone media for NeRF reconstruction.
 7. Enjoy!
 
-## Results  
-
-To evaluate the effectiveness of the generated flightpaths, we compared reconstructions obtained with **traditional photogrammetry** and with **Neural Radiance Fields (NeRF)**. Both methods used the same input data collected from our drone flight missions.  
-
-<p align="center">
-  <img src="images/photogrammetry_result.png" alt="Photogrammetry Result" width="400"/>
-  <img src="images/nerf_result.png" alt="NeRF Result" width="400"/>
-</p>  
 
 ### Reconstruction Technologies: Photogrammetry vs NeRF  
 The end goal was to evaluate the effectiveness of the generated flightpaths through the reconstructions obtained with **traditional photogrammetry** and with **Neural Radiance Fields (NeRF)**. Both methods used the same input data collected from our drone flight missions.
