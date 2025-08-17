@@ -94,16 +94,19 @@ Drone-Thesis-2025/
 ### Reconstruction Technologies: Photogrammetry vs NeRF  
 The end goal was to evaluate the effectiveness of the generated flightpaths through the reconstructions obtained with **traditional photogrammetry** and with **Neural Radiance Fields (NeRF)**. Both methods used the same input data collected from our drone flight missions.
 
-<div align="center">
-  <div style="display:inline-block; margin:10px; text-align:center;">
-    <img src="assets/photogrammetry_results.png" alt="Photogrammetry Result" height="300"/><br/>
-    <sub>Photogrammetry example (PolyCam)</sub>
-  </div>
-  <div style="display:inline-block; margin:10px; text-align:center;">
-    <img src="assets/nerf_results.png" alt="NeRF Result" height="300"/><br/>
-    <sub>NeRF example (Luma AI)</sub>
-  </div>
-</div>
+<table align="center">
+  <tr>
+    <td align="center">
+      <img src="assets/photogrammetry_results.png" alt="Photogrammetry Result" height="300"/><br/>
+      <sub>Photogrammetry example (PolyCam)</sub>
+    </td>
+    <td align="center">
+      <img src="assets/nerf_results.png" alt="NeRF Result" height="300"/><br/>
+      <sub>NeRF example (Luma AI)</sub>
+    </td>
+  </tr>
+</table>
+
 
 
 - **Photogrammetry (PolyCam)**: While capable of reconstructing the overall geometry of a room, photogrammetry often struggles with textureless surfaces, varying lighting, and fine details. Reconstructions are typically incomplete or require significant manual post-processing.  
@@ -113,10 +116,11 @@ The end goal was to evaluate the effectiveness of the generated flightpaths thro
 ## Additional Features - Future Work  
 In addition to the standard dashboard functionalities, we developed an **extended version** of the system: the **Target Flight Dashboard**. This version allows users not only to generate complete flightpaths but also to focus on **specific regions of interest within a room**.  
 
-<figure style="margin:auto; text-align:center;">
-  <img src="assets/target_flights.png" alt="Target Flight Dashboard" width="800"/>
-  <figcaption>Target Flight Dashboard – voxel grid partitioning and region selection for targeted flights</figcaption>
-</figure>
+<div align="center">
+  <img src="assets/target_flights.png" alt="Target Flight Dashboard" width="800"/><br/>
+  <sub>Target Flight Dashboard – voxel grid partitioning and region selection for targeted flights</sub>
+</div>
+
 
 
 Key features include:  
